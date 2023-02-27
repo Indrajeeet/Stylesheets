@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Project Form</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        
+        color:white;
+      }
+      form {
+        max-width: 660px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding:20px;
+        border: 2px solid white;
+        background: teal;
+        border-radius:5px;
+        
+      }
+      label {
+        display: block;
+        margin-top: 20px;
+      }
+      input[type="text"],
+      input[type="file"],
+      textarea {
+        width: 100%;
+        padding: 5px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+      }
+      button[type="submit"] {
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      button[type="submit"]:hover {
+        background-color: #45a049;
+      }
+    </style>
+  </head>
+  <body>
+    <form action="#" method="post" enctype="multipart/form-data">
+      <img src="company_logo.png" alt="Company Logo" />
+      <i>
+          this form will generate test report 
+          </i>
+      <label for="project_name">Project Name:</label>
+      <input type="text" id="project_name" name="project_name" required />
+      <label for="service_name">Service Name:</label>
+      <input type="text" id="service_name" name="service_name" required />
+      <label for="soap_project">SOAP Project:</label>
+      <input type="file" id="soap_project" name="soap_project" required />
+      <label for="test_location">Test Location:</label>
+      <input type="text" id="test_location" name="test_location" required />
+      <label for="comments">Comments:</label>
+      <textarea id="comments" name="comments"></textarea>
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>
