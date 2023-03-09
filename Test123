@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
+<html><head>
     <title>My Website</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -10,15 +8,23 @@
         font-family: Arial, sans-serif;
         color: #333;
         background-color: #fff;
+		  max-width: 900px;
+		margin: auto;
       }
       .hero {
-        background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKBANhBu4hsWeR9YhTQgeh-8uCO7I0RNP-Sg&usqp=CAU");
+        background-image: url("https://www.datarobot.com/wp-content/uploads/2021/12/automated-machine-learning-hero-banner.jpeg");
+		position: relative;
+  width: 900px; /* set your desired width */
+  height: 400px; /* set your desired height */
+  overflow: hidden; /* hide the overflow of the container */
+		clip: rect(50px 150px 150px 500px);
         background-size: cover;
-        height: 400px;
+        
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        text-align: center;
+		
+      
         color: white;
       }
       .hero h1 {
@@ -46,7 +52,10 @@
         background-color: #00bcd4;
         color: #fff;
         padding: 10px;
-        margin: 10px;
+        margin: 0px;
+	
+        flex-wrap: wrap;
+		max-width:430px;
       }
       @media only screen and (max-width: 600px) {
         .menu-container {
@@ -66,6 +75,15 @@
           font-size: 2rem;
         }
       }
+	  
+	   .footer {
+        background-color: #333;
+        color: #fff;
+        padding: 20px;
+        text-align: center;
+        font-size: 0.8rem;
+      }
+	  
     </style>
   </head>
   <body>
@@ -76,26 +94,43 @@
       <a href="#">schemaDoc</a>
       <a href="#">file Processing</a>
     </div>
-    <div class="hero">
-      <h1>SOA Automation</h1>
+	 <div class="hero">
+      <h1>SOA Accelerator Offerings</h1>
+	  </div>
+    <div>
+      <p style="
+    background: #465050;
+    border-radius: 4px;
+    text-align: center;
+">Get Detailed Reports on Your SOAP APIs with SoapUIReport <br>
+	  Seamlessly Upload and Download Files with Our Easy-to-Use File Management System <br>
+	  Easily Create and Share XSD Documentation with Our Powerful XSD Documentor <br>
+	  Create Professional WSDL Documentation in Minutes with Our WSDL Documentor </p>
     </div>
+	
+	<div style="display:flex; flex-wrap:wrap">
     <div class="box-container" style="background-color: #009688;">
-      <h2>Home</h2>
-      <p>This is the homepage of my website. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae semper sapien, id blandit nisi. Sed auctor hendrerit dolor vel ultricies.</p>
+      <h2>SchemaDoc</h2>
+      <p>Our XSD documentor makes it easy to create and share documentation for your XML schema definitions (XSDs). With our intuitive interface, you can quickly generate documentation that includes descriptions, data types, and more. You can also customize the layout and styling of your documentation to match your branding and style guide.</p>
     </div>
     <div class="box-container" style="background-color: #00bcd4;">
       <h2>soapuiReport</h2>
       <p>This is the SoapUI report page. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae semper sapien, id blandit nisi. Sed auctor hendrerit dolor vel ultricies.</p>
     </div>
-    <div class="box-container" style="background-color: #009688;">
+    <div class="box-container" style="background-color: #00bcd4;">
       <h2>wsdlDoc</h2>
-      <p>This is the WSDL documentation page. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae semper sapien, id blandit nisi. Sed auctor hendrerit dolor vel ultricies.</p>
+      <p>Our WSDL documentor makes it easy to create professional documentation for your web services. With our user-friendly interface, you can quickly generate documentation that includes detailed descriptions of your services, operations, and data types. You can also customize the look and feel of your documentation to match your branding and style guide. With our WSDL documentor, you can provide clear and concise documentation to your users and stakeholders.</p>
     </div>
     
     <div class="box-container" style="background-color: #009688;">
       <h2>file Processing</h2>
       <p>This is the file processing page. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla vitae semper sapien, id blandit nisi. Sed auctor hendrerit dolor vel ultricies.</p>
     </div>
-  </body>
-</html>
+  
+   <footer class="footer">
+      <p>© 2023 My Website. All rights reserved. | Designed by Me</p>
+    </footer>
+  </div>
+  
 
+</body></html>
