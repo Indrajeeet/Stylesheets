@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		table {
+			border-collapse: collapse;
+			width: 100%;
+			margin-bottom: 10px;
+		}
+		th, td {
+			border: 1px solid #ddd;
+			padding: 8px;
+			text-align: left;
+		}
+		th {
+			background-color: #f2f2f2;
+		}
+		.child-table {
+			display: none;
+		}
+		.parent-table tr:first-child {
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+
+	<table class="parent-table">
+		<tr>
+
+			<th>Eventid</th>
+			<th>Project</th>
+        	<th>Service</th>
+		</tr>
+		<tr>
+			<td>123456</td>
+			<td>Project 1</td>
+			<td>Service 1</td>
+			
+				<table class="child-table">
+					<tr>
+				<th>audit step</th>
+			<th>Transaction ID</th>
+			<th>Process Name</th>
+					</tr>
+					<tr>
+						<td>info</td>
+						<td>789</td>
+						<td>Process 1</td>
+					</tr>
+					<tr>
+						<td colspan="3">
+							<table>
+								<tr>
+									<th>Payload</th>
+								</tr>
+								<tr>
+									<td>Some payload data goes here...</td>
+								</tr>
+							</table>
+						</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+
+	<script>
+		var parentTable = document.getElementsByClassName("parent-table")[0];
+		var childTable = document.getElementsByClassName("child-table")[0];
+
+		parentTable.onclick = function() {
+			if (childTable.style.display === "none") {
+				childTable.style.display = "table";
+			} else {
+				childTable.style.display = "none";
+			}
+		};
+	</script>
+
+</body>
+</html>
