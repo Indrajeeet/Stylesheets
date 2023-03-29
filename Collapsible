@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Collapsible Table</title>
+	<style>
+		table, th, td {
+			
+			border-collapse: collapse;
+			padding: 5px;
+		}
+		.collapsible {
+			cursor: pointer;
+		background:teal;
+			font-: bold;
+			text-align: center;
+		}
+		.content {
+			padding: 0 5px;
+			display: none;
+			overflow: hidden;
+			background:cyan;
+			color: white;
+		}
+	</style>
+</head>
+<body>
+
+<table>
+	<thead>
+		<tr>
+			<th>Column 1</th>
+			<th>Column 2</th>
+			<th>Column 3</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr class="collapsible">
+			<td>Row 1, Column 1</td>
+			<td>Row 1, Column 2</td>
+			<td>Row 1, Column 3</td>
+		</tr>
+		<tr class="content">
+			<td colspan="3">
+				<table>
+					<tr>
+						<td>Sub-row 1, Column 1</td>
+						<td>Sub-row 1, Column 2</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+		<tr class="collapsible">
+			<td>Row 2, Column 1</td>
+			<td>Row 2, Column 2</td>
+			<td>Row 2, Column 3</td>
+		</tr>
+		<tr class="content">
+			<td colspan="3">
+				<table>
+					<tr>
+						<td>Sub-row 2, Column 1</td>
+						<td>Sub-row 2, Column 2</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+<script>
+	var coll = document.getElementsByClassName("collapsible");
+	var i;
+	for (i = 0; i < coll.length; i++) {
+		coll[i].addEventListener("click", function() {
+			this.classList.toggle("active");
+			var content = this.nextElementSibling;
+			if (content.style.display === "table-row") {
+				content.style.display = "none";
+			} else {
+				content.style.display = "table-row";
+			}
+		});
+	}
+</script>
+
+</body>
+</html>
