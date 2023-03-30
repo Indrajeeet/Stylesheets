@@ -1,0 +1,15 @@
+WITH eventids AS (
+  SELECT eventid
+  FROM Events
+  WHERE date = '2023-03-30'
+)
+SELECT *
+FROM Logs
+WHERE eventid IN (SELECT eventid FROM eventids)
+  
+UNION ALL
+
+SELECT *
+FROM Exceptions
+WHERE eventid IN (SELECT eventid FROM eventids);
+
