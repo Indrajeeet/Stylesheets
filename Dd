@@ -1,0 +1,21 @@
+<label for="projects">Select or Type Projects:</label>
+<input type="text" name="projects" id="projects" placeholder="Type here or select from dropdown">
+<select id="projectList" onchange="updateProjects()">
+  <option value="">--Select Project--</option>
+  <option value="proj1">Project 1</option>
+  <option value="proj2">Project 2</option>
+  <option value="proj3">Project 3</option>
+  <option value="proj4">Project 4</option>
+</select>
+
+<script>
+function updateProjects() {
+  var selectedProjects = document.querySelectorAll('#projectList option:checked');
+  var projectNames = [];
+  for (var i = 0; i < selectedProjects.length; i++) {
+    projectNames.push(selectedProjects[i].value);
+  }
+  var projectsInput = document.querySelector('#projects');
+  projectsInput.value = projectNames.join(', ');
+}
+</script>
