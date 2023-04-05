@@ -1,26 +1,74 @@
-#!/bin/bash
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xsl:output method="html" />
 
-# Enter the remote server's IP address or domain name
-remote_server="remote_server_ip_or_domain_name"
+  <xsl:template match="/">
+    <html>
+      <head>
+        <title>XSD Documentation</title>
+      </head>
+      <body>
+        <xsl:apply-templates />
+      </body>
+    </html>
+  </xsl:template>
 
-# Enter the remote server's username
-remote_user="remote_username"
+  <xsl:template match="xs:complexType">
+    <xsl:if test="count(xs:sequence/xs:element) &gt; 1">
+      <h2>
+        <xsl:value-of select="@name" />
+        Table
+      </h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Element Name</th>
+            <th>Type</th>
+            <th>CARDINALITY</th>
+            <th>Restrictions</th>
+            <th>Attributes</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:apply-templates select="xs:sequence/xs:element"/>
+        </tbody>
+      </table>
+    </xsl:if>
+  </xsl:template>
 
-# Enter the remote file path and name
-remote_file="/path/to/remote/file"
+  <xsl:template match="xs:element">
+    <tr>
+      <td><xsl:value-of select="@name" /></td>
+      <td><xsl:value-of select="@type" /></td>
+      <td><xsl:value-of select="@minOccurs" /> - <xsl:value-of select="@maxOccurs" /></td>
+      <td><xsl:apply-templates select="xs:simpleType/xs:restriction"/></td>
+      <td>
+        <xsl:apply-templates select="xs:complexType/xs:attribute"/>
+      </td>
+      <td><xsl:apply-templates select="xs:annotation/xs:documentation"/></td>
+    </tr>
+    <xsl:apply-templates select="xs:complexType/xs:sequence/xs:element"/>
+  </xsl:template>
 
-# Enter the local file path and name
-local_file="/path/to/local/file"
+  <xsl:template match="xs:simpleType/xs:restriction">
+    <xsl:value-of select="@base" />
+    <xsl:if test="xs:enumeration">
+      <br />
+      <xsl:text>Enumeration: </xsl:text>
+      <xsl:for-each select="xs:enumeration">
+        <xsl:value-of select="@value" />
+        <xsl:if test="position() != last()">
+          <xsl:text>, </xsl:text>
+        </xsl:if>
+      </xsl:for-each>
+    </xsl:if>
+  </xsl:template>
 
-# Enter the password for the remote server
-password="password_here"
+  <xsl:template match="xs:complexType/xs:attribute">
+    <xsl:value-of select="@name" />
+    <xsl:if test="position() != last()">
+      <xsl:text>, </xsl:text>
+    </xsl:if>
+  </xsl:template>
 
-# Use scp command to transfer the file from remote server to local
-echo $password | scp $remote_user@$remote_server:$remote_file $local_file
-
-# Verify if the file transfer is successful
-if [ $? -eq 0 ]; then
-    echo "File transfer successful."
-else
-    echo "File transfer failed."
-fi
+</xsl:stylesheet>
