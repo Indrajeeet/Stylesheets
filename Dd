@@ -1,18 +1,26 @@
 #!/bin/bash
 
-# Set the necessary variables
-remote_user="username" # Replace with the remote server's username
-remote_host="remote.server.com" # Replace with the remote server's hostname or IP address
-remote_file="/path/to/remote/file" # Replace with the path to the remote file you want to copy
-local_file="/path/to/local/file" # Replace with the path where you want to save the file locally
-password="password123" # Replace with the password for the remote user
+# Enter the remote server's IP address or domain name
+remote_server="remote_server_ip_or_domain_name"
 
-# Use the scp command to copy the remote file to the local machine
-sshpass -p "$password" scp "$remote_user@$remote_host:$remote_file" "$local_file"
+# Enter the remote server's username
+remote_user="remote_username"
 
-# Check the exit code to see if the copy was successful
-if [ "$?" -eq 0 ]; then
-    echo "File copied successfully."
+# Enter the remote file path and name
+remote_file="/path/to/remote/file"
+
+# Enter the local file path and name
+local_file="/path/to/local/file"
+
+# Enter the password for the remote server
+password="password_here"
+
+# Use scp command to transfer the file from remote server to local
+echo $password | scp $remote_user@$remote_server:$remote_file $local_file
+
+# Verify if the file transfer is successful
+if [ $? -eq 0 ]; then
+    echo "File transfer successful."
 else
-    echo "File copy failed."
+    echo "File transfer failed."
 fi
