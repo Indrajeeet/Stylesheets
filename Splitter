@@ -1,0 +1,25 @@
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <!-- match the root element of your XML document -->
+  <xsl:template match="/">
+    <output>
+      <!-- use for-each to iterate over the repeating elements -->
+      <xsl:for-each select="//repeating_element">
+        <!-- check if the current position is the first in a set of 10 -->
+        <xsl:if test="position() mod 10 = 1">
+          <!-- start a new set of 10 elements -->
+          <set>
+            <!-- select the current element and the next 9 elements -->
+            <xsl:variable name="set_elements" select=". | following-sibling::repeating_element[position() &lt; 10]" />
+            <!-- output the set of elements as a comma-separated list -->
+            <xsl:value-of select="concat('(', $set_elements[1], 
+                                          ',', 
+                                          string-join($set_elements[position() > 1], "','"),
+                                          ')')"/>
+          </set>
+        </xsl:if>
+      </xsl:for-each>
+    </output>
+  </xsl:template>
+
+</xsl:stylesheet>
