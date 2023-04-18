@@ -20,10 +20,11 @@ cores=$(lscfg | grep "proc" | wc -l)
 
 # Get hard disk size information
 disks=$(lsdev -Cc disk | awk '{print $1}')
+hard_disk_size=""
 for disk in $disks
 do
-  size=$(bootinfo -s $disk)
-  hard_disk_size+=" $disk:$size bytes"
+  size=$(lspv $disk | awk '{print $3}')
+  hard_disk_size+=" $disk:$size"
 done
 
 # Get CPU clock speed information
