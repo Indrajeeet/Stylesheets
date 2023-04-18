@@ -1,0 +1,38 @@
+#!/bin/ksh
+
+# Function to print table header
+print_table_header() {
+    echo "+------------------+-------------+----------------+------------------+"
+    echo "|       Item       |   RAM (MB)  |  CPU Cores      |  Hard Disk Size  |  CPU Clock Speed (MHz)  |"
+    echo "+------------------+-------------+----------------+------------------+"
+}
+
+# Function to print table row
+print_table_row() {
+    echo "|  $1  |  $2  |  $3  |  $4  |  $5  |"
+}
+
+# Get RAM information
+ram=$(prtconf | grep "Memory Size" | awk '{print $3}')
+
+# Get CPU core information
+cores=$(lscfg | grep "proc" | wc -l)
+
+# Get hard disk size information
+disks=$(lsdev -Cc disk | awk '{print $1}')
+for disk in $disks
+do
+  size=$(bootinfo -s $disk)
+  hard_disk_size+=" $disk:$size bytes"
+done
+
+# Get CPU clock speed information
+clock_speed=$(prtconf | grep "Processor Clock Speed" | awk '{print $4}')
+
+# Print table header
+print_table_header
+
+# Print table row with gathered information
+print_table_row "System Information" "$ram MB" "$cores" "$hard_disk_size" "$clock_speed"
+
+echo "+------------------+-------------+----------------+------------------+"
