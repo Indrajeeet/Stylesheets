@@ -1,0 +1,50 @@
+import com.jcraft.jsch.*;
+
+import java.io.*;
+
+public class FileTransferExample {
+    public static void main(String[] args) {
+        String localFilePath = "/path/to/local/file.txt"; // Local file path
+        String remoteFilePath = "/path/to/remote/file.txt"; // Remote file path on the remote server
+        String remoteHost = "example.com"; // Remote host name or IP address
+        String username = "your-username"; // SSH username
+        String password = "your-password"; // SSH password
+
+        JSch jsch = new JSch();
+        Session session = null;
+        ChannelSftp channelSftp = null;
+        FileInputStream fis = null;
+        try {
+            // Create a JSch session
+            session = jsch.getSession(username, remoteHost);
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect();
+
+            // Open an SFTP channel
+            channelSftp = (ChannelSftp) session.openChannel("sftp");
+            channelSftp.connect();
+
+            // Transfer file to remote server
+            fis = new FileInputStream(localFilePath);
+            channelSftp.put(fis, remoteFilePath);
+            System.out.println("File transfer successful!");
+        } catch (JSchException | SftpException | FileNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (fis != null) {
+                    fis.close();
+                }
+                if (channelSftp != null) {
+                    channelSftp.disconnect();
+                }
+                if (session != null) {
+                    session.disconnect();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
