@@ -52,6 +52,7 @@
 		<tr class="collapsible">
 			<td>Row 2, Column 1</td>
 			<td>Row 2, Column 2</td>
+			
 			<td>Row 2, Column 3</td>
 		</tr>
 		<tr class="content">
