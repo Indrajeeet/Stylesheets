@@ -1,1 +1,40 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Record Details</title>
+	<script>
+		function viewDetails(id) {
+			// Open a new window with the details of the record
+			var detailsWindow = window.open("", "_blank", "width=400,height=300");
+			// Write the details to the new window
+			detailsWindow.document.write("<h2>Record Details</h2>");
+			detailsWindow.document.write("<p>Details for record " + id + " go here.</p>");
+		}
+	</script>
+</head>
+<body>
+	<h1>Record Summary</h1>
+	<table>
+		<thead>
+			<tr>
+				<th>Record ID</th>
+				<th>Summary</th>
+				<th>View Details</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td>1</td>
+				<td>Summary for Record 1</td>
+				<td><button onclick="viewDetails(1)">View Details</button></td>
+			</tr>
+			<tr>
+				<td>2</td>
+				<td>Summary for Record 2</td>
+				<td><button onclick="viewDetails(2)">View Details</button></td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>
