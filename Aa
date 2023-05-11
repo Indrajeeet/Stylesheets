@@ -1,15 +1,33 @@
 
+DOCTYPE html Details</h2>");
+			detailsWindow.d
+		
+		
+	
 <!DOCTYPE html>
 <html>
 <head>
 	<title>Record Details</title>
 	<script>
 		function viewDetails(id) {
-			// Open a new window with the details of the record
+			// Create a new window
 			var detailsWindow = window.open("", "_blank", "width=400,height=300");
-			// Write the details to the new window
-			detailsWindow.document.write("<h2>Record Details</h2>");
-			detailsWindow.document.write("<p>Details for record " + id + " go here.</p>");
+
+			// Send an HTTP request to fetch the record details
+			var xhr = new XMLHttpRequest();
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState === XMLHttpRequest.DONE) {
+					if (xhr.status === 200) {
+						// Write the details to the new window
+						detailsWindow.document.write("<h2>Record Details</h2>");
+						detailsWindow.document.write("<p>" + xhr.responseText + "</p>");
+					} else {
+						alert("Failed to fetch record details.");
+					}
+				}
+			};
+			xhr.open("GET", "/getRecordDetails?id=" + id, true);
+			xhr.send();
 		}
 	</script>
 </head>
