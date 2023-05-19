@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Responsive Tables with DataTable and jQuery</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.15/css/dataTables.bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://cdn.datatables.net/1.10.15/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.15/js/dataTables.bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+
+  <h1>Responsive Tables with DataTable and jQuery</h1>
+
+  <table id="table1" class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>John Doe</td>
+        <td>john.doe@example.com</td>
+        <td>123-456-7890</td>
+      </tr>
+      <tr>
+        <td>Jane Doe</td>
+        <td>jane.doe@example.com</td>
+        <td>555-666-7777</td>
+      </tr>
+      <tr>
+        <td>Bill Smith</td>
+        <td>bill.smith@example.com</td>
+        <td>888-999-0000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    $(document).ready(function() {
+      // Initialize DataTable
+      var table = $('#table1').DataTable({
+        responsive: true
+      });
+
+      // Add filter to each column
+      table.columns().every(function() {
+        var title = $(this).text();
+        $(this).html('<input type="text" placeholder="Search '+title+'" />')
+      });
+    });
+  </script>
+
+  <h2>Searchable Table</h2>
+
+  <table id="table2" class="table table-striped table-bordered">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>John Doe</td>
+        <td>john.doe@example.com</td>
+        <td>123-456-7890</td>
+      </tr>
+      <tr>
+        <td>Jane Doe</td>
+        <td>jane.doe@example.com</td>
+        <td>555-666-7777</td>
+      </tr>
+      <tr>
+        <td>Bill Smith</td>
+        <td>bill.smith@example.com</td>
+        <td>888-999-0000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    $(document).ready(function() {
+      // Initialize DataTable
+      var table = $('#table2').DataTable({
+        responsive: true,
+        searching: true
+      });
+    });
+  </script>
+
+</div>
+
+</body>
+</html>
