@@ -1,0 +1,46 @@
+
+<html>
+  <head>
+    <title>Table with scrollable columns</title>
+    <style>
+      table {
+        height: 400px;
+        overflow-y: scroll;
+      }
+
+      td {
+        text-align: left;
+        vertical-align: top;
+        overflow-y: scroll;
+      }
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr>
+          <th>Column 1</th>
+          <th>Column 2</th>
+          <th>Column 3</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>This is the first cell in column 1.</td>
+          <td>This is the first cell in column 2.</td>
+          <td>This is the first cell in column 3.</td>
+        </tr>
+        <tr>
+          <td>This is the second cell in column 1.</td>
+          <td>This is the second cell in column 2.</td>
+          <td>This is the second cell in column 3.</td>
+        </tr>
+        <tr>
+          <td>This is the third cell in column 1.</td>
+          <td>This is the third cell in column 2.</td>
+          <td>This is the third cell in column 3.</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>
