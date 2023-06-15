@@ -1,2 +1,30 @@
 
+-- Assuming you have a table called "your_table" with the following columns:
+-- Firstname (VARCHAR2), Lastname (VARCHAR2), Email (VARCHAR2), Mobile (VARCHAR2), 
+-- Accountnumber (VARCHAR2), Smsfailedflag (NUMBER), Emailfailedflag (NUMBER), Updateddate (DATE)
+
+DECLARE
+  num_rows NUMBER := 1000000; -- Number of rows to be inserted
+  batch_size NUMBER := 1000; -- Number of rows to be inserted in each batch
+BEGIN
+  FOR i IN 1..CEIL(num_rows/batch_size) LOOP
+    FOR j IN 1..batch_size LOOP
+      -- Generate random values for each column
+      INSERT INTO your_table (Firstname, Lastname, Email, Mobile, Accountnumber, Smsfailedflag, Emailfailedflag, Updateddate)
+      VALUES (
+        DBMS_RANDOM.STRING('U', 10), -- Random uppercase Firstname
+        DBMS_RANDOM.STRING('U', 10), -- Random uppercase Lastname
+        DBMS_RANDOM.STRING('L', 10) || '@example.com', -- Random lowercase Email
+        '555' || LPAD(DBMS_RANDOM.VALUE(1000000, 9999999), 7, '0'), -- Random 10-digit Mobile number
+        DBMS_RANDOM.STRING('A', 10), -- Random Accountnumber
+        TRUNC(DBMS_RANDOM.VALUE(0, 1)), -- Random Smsfailedflag (0 or 1)
+        TRUNC(DBMS_RANDOM.VALUE(0, 1)), -- Random Emailfailedflag (0 or 1)
+        SYSDATE - DBMS_RANDOM.VALUE(0, 365) -- Random Updateddate within the past year
+      );
+    END LOOP;
+    
+    COMMIT; -- Commit the batch
+  END LOOP;
+END;
+/
 
