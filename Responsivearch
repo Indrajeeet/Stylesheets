@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FINAL CI/CD DESIGN – Apache Hop on ROSA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eef2f7;--card:#fff;
+  --blue:#1e5cb3;--blue-dk:#0f2d6b;--blue-lt:#dbeafa;--blue-bd:#8ab0e0;
+  --green:#1a7c3e;--green-dk:#155724;--green-lt:#d4edda;--green-bd:#7dbc8f;
+  --teal:#0e7c86;--teal-dk:#0d5c63;--teal-lt:#c8e8e8;--teal-bd:#5db8c0;
+  --purple:#6f3aab;--purple-dk:#4a1d7a;--purple-lt:#e8d8f8;--purple-bd:#b07de0;
+  --amber:#d97706;--amber-lt:#fff8e1;--amber-bd:#ffd966;
+  --red:#c0392b;--red-lt:#fdecea;--red-bd:#f5a9a3;
+  --slate:#1e293b;--muted:#64748b;--border:#dee2e6;
+  --code:#0f172a;
+  --r:8px;--gap:10px;--pad:10px;
+}
+html,body{width:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--slate);font-size:12px;line-height:1.45;padding:var(--gap)}
+
+/* ── PAGE HEADER ── */
+.page-hdr{text-align:center;background:linear-gradient(90deg,var(--blue-lt),#fff,var(--blue-lt));border:2px solid var(--blue-bd);border-radius:var(--r);padding:10px 16px;margin-bottom:var(--gap)}
+.page-hdr h1{font-size:clamp(14px,2vw,22px);font-weight:900;color:var(--blue-dk)}
+.page-hdr p{font-size:clamp(9px,1vw,12px);color:var(--muted);margin-top:3px}
+
+/* ── SECTION WRAPPER ── */
+.sec{border-radius:var(--r);padding:var(--pad);display:flex;flex-direction:column;gap:7px}
+.sec-hdr{font-size:clamp(9px,1vw,11px);font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:#fff;border-radius:6px;padding:4px 10px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0}
+
+/* ── SECTION COLOURS ── */
+.sec-blue  {background:var(--blue-lt); border:2px solid var(--blue-bd)}
+.sec-blue  .sec-hdr{background:var(--blue-dk)}
+.sec-green {background:var(--green-lt);border:2px solid var(--green-bd)}
+.sec-green .sec-hdr{background:var(--green)}
+.sec-teal  {background:var(--teal-lt); border:2px solid var(--teal-bd)}
+.sec-teal  .sec-hdr{background:var(--teal)}
+.sec-purple{background:var(--purple-lt);border:2px solid var(--purple-bd)}
+.sec-purple .sec-hdr{background:var(--purple)}
+.sec-indigo{background:#e0e8ff;border:2px solid #7b96e0}
+.sec-indigo .sec-hdr{background:#2d3a8c}
+
+/* ── MASTER LAYOUT ── */
+.row1{display:grid;grid-template-columns:minmax(0,15%) 1fr minmax(0,17%) minmax(0,17%);gap:var(--gap);margin-bottom:var(--gap)}
+.row2{display:grid;grid-template-columns:1fr minmax(0,21%);gap:var(--gap);margin-bottom:var(--gap)}
+.row3{margin-bottom:var(--gap)}
+.row4{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+
+/* ── GENERIC CARD ── */
+.card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:8px}
+.card-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+
+/* ── BULLETS ── */
+.bul{list-style:none;display:flex;flex-direction:column;gap:3px}
+.bul li{padding-left:11px;position:relative;font-size:10.5px;color:#334155;line-height:1.4}
+.bul li::before{content:'•';position:absolute;left:0}
+.bul.blue li::before{color:var(--blue)}
+.bul.green li::before{color:var(--green)}
+.bul.teal li::before{color:var(--teal)}
+.bul.purple li::before{color:var(--purple)}
+.bul.amber li::before{color:var(--amber)}
+
+/* ── CODE ── */
+.code{background:var(--code);border-radius:6px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.75}
+.kw{color:#f472b6;font-weight:600}.val{color:#a3e635}.str{color:#f87171}.arg{color:#e2e8f0}.key{color:#38bdf8}
+
+/* ── ARROWS ── */
+.arr{text-align:center;font-size:14px;font-weight:700;line-height:1;flex-shrink:0}
+
+/* ══════════ S1 ══════════ */
+.s1-dev{display:flex;align-items:center;gap:8px;padding:3px 0}
+.bb-box{background:var(--card);border:1.5px solid var(--blue-bd);border-radius:var(--r);padding:7px;display:flex;align-items:center;gap:8px}
+.bb-logo{width:26px;height:26px;background:#2684ff;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ftree{font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.85;color:#475569}
+.ftree .fd{color:var(--blue-dk);font-weight:600}.ftree .fg{color:var(--green);font-weight:600}.ftree .fb{color:var(--blue)}
+.yaml-grid{display:grid;grid-template-columns:auto 1fr;gap:1px 5px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.8}
+.yaml-k{color:#2684ff}.yaml-v{color:var(--slate)}.yaml-g{color:var(--green);font-weight:600}
+
+/* ══════════ S2 ══════════ */
+.steps-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.step{background:var(--card);border:1.5px solid var(--blue-bd);border-radius:var(--r);padding:8px;display:flex;flex-direction:column;gap:4px}
+.step-top{display:flex;align-items:center;gap:5px}
+.step-num{width:20px;height:20px;background:var(--blue-dk);color:#fff;border-radius:50%;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-ttl{font-size:10px;font-weight:700;color:var(--blue-dk);line-height:1.3}
+.step-ico{text-align:center;padding:3px 0}
+.df-box{background:var(--card);border:1.5px solid var(--blue-bd);border-radius:var(--r);padding:8px}
+.df-title{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--blue-dk);letter-spacing:.4px;text-align:center;margin-bottom:5px}
+
+/* ══════════ S3 ══════════ */
+.repo-grp{background:var(--card);border:1.5px solid var(--green-bd);border-radius:var(--r);padding:7px}
+.repo-grp-title{font-size:10px;font-weight:700;color:var(--green-dk);text-align:center;border-bottom:1px solid var(--green-lt);padding-bottom:3px;margin-bottom:5px}
+.repo-item{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#1e293b;padding:1px 0}
+.repo-item.ok{color:var(--green);font-weight:700}.repo-item.lt{color:var(--blue);font-weight:600}
+.art-checks{background:#f0fdf4;border:1px solid var(--green-bd);border-radius:6px;padding:7px;display:flex;flex-direction:column;gap:3px}
+.art-chk{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--green-dk)}
+
+/* ══════════ S4 ══════════ */
+.pstage{border-radius:7px;padding:6px 8px}
+.pstage.dev{background:var(--blue-lt);border:1.5px solid var(--blue-bd)}
+.pstage.gate{background:var(--amber-lt);border:1.5px solid var(--amber-bd);display:flex;align-items:center;gap:7px}
+.pstage.qa,.pstage.uat{background:#f5f5f5;border:1.5px solid #ccc}
+.pstage.prod{background:var(--red-lt);border:1.5px solid var(--red-bd)}
+.pstage-lbl{font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px}
+.gate-ico{width:26px;height:26px;border-radius:50%;background:var(--purple-lt);border:1.5px solid var(--purple-bd);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gate-lbl{font-size:10px;font-weight:700;color:var(--purple-dk)}
+.gate-sub{font-size:9.5px;color:var(--muted)}
+
+/* ══════════ S5 ══════════ */
+.runtime-cols{display:grid;grid-template-columns:1fr 1fr 1.3fr 1fr;gap:var(--gap)}
+.cfg-hdr{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 8px;border-radius:5px;text-align:center;margin-bottom:4px}
+.cfg-hdr.cm{background:#d1fae5;color:var(--green-dk)}.cfg-hdr.sec{background:var(--red-lt);color:var(--red)}
+.cfg-sub{font-size:9.5px;color:var(--muted);font-style:italic;text-align:center;margin-bottom:4px}
+.cfg-ex{font-size:9.5px;font-weight:700;color:var(--teal);margin:4px 0 2px}
+.how-step{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
+.how-num{width:18px;height:18px;border-radius:50%;background:var(--blue);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.how-txt{font-size:10px;color:#1e293b;line-height:1.5}
+.how-txt strong{color:var(--blue-dk)}
+.mount-bar{background:#d1f5f7;border:1.5px solid var(--teal-bd);border-radius:7px;padding:6px 12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:6px}
+.mount-chip{font-family:'JetBrains Mono',monospace;font-size:9.5px;background:#fff;border:1px solid var(--teal-bd);border-radius:4px;padding:1px 6px;color:var(--teal-dk)}
+
+/* ══════════ S6 ══════════ */
+.dep-flow{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px}
+.dep-node{background:var(--card);border:1.5px solid var(--blue-bd);border-radius:var(--r);padding:8px 12px;text-align:center}
+.dep-node-lbl{font-size:10px;font-weight:700;color:var(--blue-dk);margin-top:3px}
+.uses-box{background:var(--blue-lt);border:1px solid var(--blue-bd);border-radius:7px;padding:7px;margin-bottom:7px}
+.uses-ttl{font-size:10px;font-weight:700;color:var(--blue-dk);margin-bottom:4px}
+.os-res{display:flex;justify-content:space-around;flex-wrap:wrap;gap:6px;margin-top:4px}
+.os-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.os-lbl{font-size:9.5px;font-weight:600;color:var(--blue-dk);text-align:center}
+
+/* ══════════ S7 ══════════ */
+.gov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap)}
+.gov-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:8px}
+.gov-ttl{font-size:11px;font-weight:700;color:var(--slate);display:flex;align-items:center;gap:6px;margin-bottom:5px}
+
+/* ══════════ ROW4 ══════════ */
+.info-box{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:10px}
+.info-ttl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--slate);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.leg-item{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--slate);margin-bottom:5px}
+.leg-line{width:36px;height:2.5px;border-radius:2px;flex-shrink:0}
+.leg-dash{width:36px;height:0;border-top:2.5px dashed;flex-shrink:0}
+.leg-rect{width:20px;height:12px;border:2px solid;border-radius:3px;flex-shrink:0}
+.ben-item{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--slate);margin-bottom:5px;line-height:1.4}
+.ben-chk{color:var(--green);font-size:13px;flex-shrink:0}
+
+/* ══════════ RESPONSIVE ══════════ */
+@media(max-width:1199px){
+  .row1{grid-template-columns:1fr 1fr}
+  .row2{grid-template-columns:1fr}
+  .runtime-cols{grid-template-columns:1fr 1fr}
+  .steps-grid{grid-template-columns:repeat(3,1fr)}
+  .gov-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:767px){
+  .row1{grid-template-columns:1fr}
+  .row4{grid-template-columns:1fr}
+  .runtime-cols{grid-template-columns:1fr}
+  .steps-grid{grid-template-columns:1fr 1fr}
+  .gov-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .steps-grid{grid-template-columns:1fr}
+  .gov-grid{grid-template-columns:1fr}
+  .row4{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="page-hdr">
+  <h1>FINAL CI/CD DESIGN – Apache Hop on ROSA (OpenShift)</h1>
+  <p>Jenkins &nbsp;+&nbsp; Bitbucket &nbsp;+&nbsp; Artifactory &nbsp;+&nbsp; Approval Workflow &nbsp;+&nbsp; ConfigMaps/Secrets &nbsp;+&nbsp; Immutable Images</p>
+</div>
+
+<!-- ══════ ROW 1 ══════ -->
+<div class="row1">
+
+  <!-- S1: SOURCE -->
+  <div class="sec sec-blue">
+    <div class="sec-hdr">1. Source (Developer)</div>
+
+    <div class="s1-dev">
+      <div style="width:34px;height:34px;background:var(--blue-dk);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:12px;color:var(--blue-dk)">Developer</div>
+        <svg width="28" height="16" viewBox="0 0 32 20" style="margin-top:2px"><rect x="2" y="2" width="28" height="16" rx="3" fill="none" stroke="#0f2d6b" stroke-width="1.5"/><polyline points="8,14 12,10 8,6" fill="none" stroke="#1e5cb3" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="14" x2="20" y2="14" stroke="#1e5cb3" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <ul class="bul blue"><li>Create/Update Hop Pipelines &amp; Workflows</li><li>Update app.yaml (metadata only)</li><li>Commit &amp; Push</li></ul>
+
+    <div class="arr" style="color:var(--blue)">↓</div>
+
+    <div class="bb-box">
+      <div class="bb-logo"><svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M1.08 1.6a.5.5 0 0 0-.5.58l2.15 13.06a.67.67 0 0 0 .67.57H16.8a.5.5 0 0 0 .5-.42l2.16-13.19a.5.5 0 0 0-.5-.6H1.08zm9.22 9.2H9.8l-.88-4.6h4.98l-.88 4.6h-3.7z" fill="#fff"/></svg></div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--blue-dk)">Bitbucket</div><div style="font-size:9.5px;color:var(--muted)">Git Repository</div></div>
+    </div>
+
+    <div class="arr" style="color:var(--blue)">↓</div>
+
+    <div class="card">
+      <div class="card-title">Repository Structure</div>
+      <div class="ftree">
+        <div class="fd">📁 my-hop-project/</div>
+        <div class="fd">&nbsp;├── 📁 hop/</div>
+        <div>&nbsp;│&nbsp;&nbsp;├── pipelines/</div>
+        <div>&nbsp;│&nbsp;&nbsp;├── workflows/</div>
+        <div>&nbsp;│&nbsp;&nbsp;└── scripts/</div>
+        <div class="fd">&nbsp;├── 📁 config/base/</div>
+        <div>&nbsp;│&nbsp;&nbsp;└── project-config.json</div>
+        <div class="fg">&nbsp;├── 📄 app.yaml</div>
+        <div class="fb">&nbsp;└── 📄 README.md</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">app.yaml (Example)</div>
+      <div class="yaml-grid">
+        <span class="yaml-k">appName:</span><span class="yaml-v">customer-load</span>
+        <span class="yaml-k">team:</span><span class="yaml-v">finance</span>
+        <span class="yaml-k">runtime:</span><span class="yaml-g">hop-runtime:2.15-v3</span>
+        <span class="yaml-k">cpu:</span><span class="yaml-v">"500m"</span>
+        <span class="yaml-k">memory:</span><span class="yaml-v">"1Gi"</span>
+        <span class="yaml-k">replicas:</span><span class="yaml-v">1</span>
+        <span class="yaml-k">route:</span><span class="yaml-v">false</span>
+        <span class="yaml-k">schedule:</span><span class="yaml-v">controlm</span>
+        <span class="yaml-k">javaOpts:</span><span class="yaml-v">-Xms512m -Xmx1024m</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S2: CI/CD PIPELINE -->
+  <div class="sec sec-blue">
+    <div class="sec-hdr">
+      <svg width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#d33f3f"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">J</text></svg>
+      2. CI/CD Pipeline (Jenkins)
+    </div>
+
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-top"><span class="step-num">1</span><span class="step-ttl">Checkout &amp; Validate</span></div>
+        <div class="step-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1e5cb3" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <ul class="bul blue"><li>Clone from Bitbucket</li><li>Validate app.yaml</li><li>Validate structure</li><li>Read metadata</li></ul>
+      </div>
+      <div class="step">
+        <div class="step-top"><span class="step-num">2</span><span class="step-ttl">Build App Image (Dynamic)</span></div>
+        <div class="step-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="#2496ed"><path d="M13.98 11.08a1.86 1.86 0 0 0 0 3.72h2.12a.19.19 0 0 0 .19-.19V9.06a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.19.19v2.02z"/><path d="M23.76 9.89c-.07-.05-.67-.51-1.95-.51a5.2 5.2 0 0 0-1.01.09c-.25-1.7-1.65-2.53-1.72-2.57l-.34-.2-.23.33a4.47 4.47 0 0 0-.61 1.43c-.23.97-.09 1.88.4 2.66-.59.33-1.55.41-1.74.42H.75a.75.75 0 0 0-.75.75c0 1.44.22 2.83.69 4.06.54 1.43 1.35 2.48 2.41 3.12 1.18.72 3.1 1.14 5.28 1.14a13.5 13.5 0 0 0 2.93-.27 12.3 12.3 0 0 0 3.82-1.39 9.45 9.45 0 0 0 2.61-2.14c1.25-1.42 2-3 2.55-4.4h.22c1.37 0 2.22-.55 2.68-1.01.31-.29.55-.65.71-1.04l.1-.29-.22-.18z"/></svg></div>
+        <ul class="bul blue"><li>Generate Dockerfile using approved runtime image</li><li>Copy hop/ &amp; scripts/</li><li>Build application image</li></ul>
+      </div>
+      <div class="step">
+        <div class="step-top"><span class="step-num">3</span><span class="step-ttl">Scan &amp; Push Image</span></div>
+        <div class="step-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1a7c3e" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <ul class="bul green"><li>Security Scan (Trivy/Xray)</li><li>Push image to Artifactory (apps repo)</li></ul>
+      </div>
+      <div class="step">
+        <div class="step-top"><span class="step-num">4</span><span class="step-ttl">Deploy to DEV (Auto)</span></div>
+        <div class="step-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e6860a" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <ul class="bul blue"><li>Deploy to DEV namespace</li><li>Create/Update ConfigMaps, Secrets</li><li>Smoke tests</li></ul>
+      </div>
+      <div class="step">
+        <div class="step-top"><span class="step-num">5</span><span class="step-ttl">Record &amp; Notify</span></div>
+        <div class="step-ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <ul class="bul amber"><li>Record build details</li><li>Notify teams (Slack/Email)</li></ul>
+      </div>
+    </div>
+
+    <div class="df-box">
+      <div class="df-title">Dynamic Dockerfile (Generated by Jenkins)</div>
+      <div class="code">
+        <span class="kw">FROM</span> <span class="arg">artifactory.company.com/docker/hop-runtime:2.15-v3</span><br>
+        <span class="kw">COPY</span> <span class="arg">hop/ /app/hop/</span><br>
+        <span class="kw">COPY</span> <span class="arg">scripts/ /app/scripts/</span><br>
+        <span class="kw">COPY</span> <span class="arg">config/base/project-config.json /app/config/base/</span><br>
+        <span class="kw">COPY</span> <span class="arg">deploy/entrypoint.sh /entrypoint.sh</span><br>
+        <span class="kw">RUN</span>  <span class="arg">chmod +x /entrypoint.sh</span><br>
+        <span class="kw">ENTRYPOINT</span> <span class="val">["/entrypoint.sh"]</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S3: ARTIFACTORY -->
+  <div class="sec sec-green">
+    <div class="sec-hdr">
+      <svg width="15" height="15" viewBox="0 0 30 30"><rect width="30" height="30" rx="5" fill="#40BE46"/><text x="15" y="20" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">JF</text></svg>
+      3. Artifactory (JFrog)
+    </div>
+
+    <div style="text-align:center;font-size:10.5px;font-weight:700;color:var(--green-dk)">Docker Repositories</div>
+
+    <div class="repo-grp">
+      <div class="repo-grp-title">Approved Runtime Images (Immutable)</div>
+      <div class="repo-item">hop-runtime:2.15-v1</div>
+      <div class="repo-item">hop-runtime:2.15-v2</div>
+      <div class="repo-item ok">hop-runtime:2.15-v3 ✓ (Approved)</div>
+      <div class="repo-item">hop-runtime:2.16-v1</div>
+      <div class="repo-item" style="color:var(--muted)">…</div>
+    </div>
+
+    <div class="arr" style="color:var(--green)">↓</div>
+
+    <div class="repo-grp">
+      <div class="repo-grp-title">Application Images (Immutable)</div>
+      <div class="repo-item">customer-load:1.2.7</div>
+      <div class="repo-item">customer-load:1.2.8</div>
+      <div class="repo-item lt">customer-load:1.2.9 (Latest)</div>
+      <div class="repo-item" style="color:var(--muted)">…</div>
+    </div>
+
+    <div class="art-checks">
+      <div class="art-chk"><span style="color:var(--green);font-size:13px">✓</span>Images scanned (Xray/Trivy)</div>
+      <div class="art-chk"><span style="color:var(--green);font-size:13px">✓</span>Signed and promoted</div>
+      <div class="art-chk"><span style="color:var(--green);font-size:13px">✓</span>Immutable – one build, many promotions</div>
+    </div>
+  </div>
+
+  <!-- S4: PROMOTION & APPROVAL -->
+  <div class="sec sec-purple">
+    <div class="sec-hdr">4. Promotion &amp; Approval</div>
+
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <div class="pstage dev">
+        <div class="pstage-lbl"><span>🔄</span><span style="color:var(--blue)">DEV</span><span style="font-size:9px;font-weight:500;background:var(--blue-lt);color:var(--blue-dk);padding:1px 6px;border-radius:10px">Automatic</span></div>
+        <ul class="bul blue" style="margin-left:18px"><li>Auto deployed</li><li>Smoke tests</li></ul>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage gate">
+        <div class="gate-ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><div class="gate-lbl">Approval Gate 1</div><div class="gate-sub">QA Approval</div></div>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage qa">
+        <div class="pstage-lbl"><span>🔄</span><span>QA</span></div>
+        <ul class="bul" style="margin-left:18px"><li>Deploy same image</li><li>Functional tests</li></ul>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage gate">
+        <div class="gate-ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><div class="gate-lbl">Approval Gate 2</div><div class="gate-sub">UAT Approval</div></div>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage uat">
+        <div class="pstage-lbl"><span>🔄</span><span>UAT</span></div>
+        <ul class="bul" style="margin-left:18px"><li>Deploy same image</li><li>UAT &amp; Regression</li></ul>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage gate">
+        <div class="gate-ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><div class="gate-lbl">Approval Gate 3</div><div class="gate-sub">PROD Approval (Change Manager)</div></div>
+      </div>
+      <div class="arr" style="color:var(--purple)">↓</div>
+      <div class="pstage prod">
+        <div class="pstage-lbl"><span>🔄</span><span style="color:var(--red)">PROD</span></div>
+        <ul class="bul" style="margin-left:18px"><li>Deploy same image</li><li>Production run</li></ul>
+      </div>
+    </div>
+  </div>
+</div><!-- /row1 -->
+
+<!-- ══════ ROW 2 ══════ -->
+<div class="row2">
+
+  <!-- S5: RUNTIME CONFIGURATION -->
+  <div class="sec sec-teal">
+    <div class="sec-hdr">5. Runtime Configuration (on ROSA)</div>
+    <div class="runtime-cols">
+
+      <!-- ConfigMap -->
+      <div class="card">
+        <div class="cfg-hdr cm">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green-dk)" stroke-width="2" style="vertical-align:middle;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          CONFIGMAP (Non-Sensitive)
+        </div>
+        <div class="cfg-sub">Non-sensitive configuration used by Hop</div>
+        <div class="cfg-ex">Examples:</div>
+        <ul class="bul teal"><li>project variables</li><li>folder paths</li><li>DB hostnames</li><li>S3 buckets</li><li>Kafka topics</li><li>log level, batch size</li><li>feature flags</li><li>thread counts</li></ul>
+        <div class="code" style="margin-top:6px">
+          <span class="key">apiVersion:</span> <span class="arg">v1</span><br>
+          <span class="key">kind:</span> <span class="val">ConfigMap</span><br>
+          <span class="key">metadata:</span><br>
+          <span class="arg">&nbsp;name: customer-load-config</span><br>
+          <span class="key">data:</span><br>
+          <span class="arg">&nbsp;DB_HOST: prod-db.company.com</span><br>
+          <span class="arg">&nbsp;INPUT_FOLDER: /landing/customer</span><br>
+          <span class="arg">&nbsp;LOG_LEVEL: INFO</span><br>
+          <span class="arg">&nbsp;BATCH_SIZE: "5000"</span>
+        </div>
+      </div>
+
+      <!-- Secret -->
+      <div class="card">
+        <div class="cfg-hdr sec">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" style="vertical-align:middle;margin-right:3px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          SECRET (Sensitive)
+        </div>
+        <div class="cfg-sub">Sensitive information only</div>
+        <div class="cfg-ex" style="color:var(--red)">Examples:</div>
+        <ul class="bul"><li style="--b:var(--red)">DB passwords</li><li>API tokens</li><li>AWS access keys</li><li>S3 keys</li><li>Private keys</li><li>Certificates</li></ul>
+        <div class="code" style="margin-top:6px">
+          <span class="key">apiVersion:</span> <span class="arg">v1</span><br>
+          <span class="key">kind:</span> <span class="val">Secret</span><br>
+          <span class="key">metadata:</span><br>
+          <span class="arg">&nbsp;name: customer-load-secret</span><br>
+          <span class="key">type:</span> <span class="arg">Opaque</span><br>
+          <span class="key">stringData:</span><br>
+          <span class="arg">&nbsp;DB_PASSWORD: mypassword</span><br>
+          <span class="arg">&nbsp;API_TOKEN: abc123xyz</span><br>
+          <span class="arg">&nbsp;AWS_ACCESS_KEY_ID: AKIA....</span>
+        </div>
+      </div>
+
+      <!-- Project Config -->
+      <div class="card">
+        <div class="card-title">PROJECT-CONFIG (from ConfigMap + Secret)</div>
+        <div style="font-size:9.5px;color:var(--teal);font-style:italic;margin-bottom:5px">Generated at container startup — not stored in image</div>
+        <ul class="bul teal">
+          <li>Combine base project-config.json (from image) with variables from ConfigMap &amp; Secret</li>
+          <li>Generate variables.json or env-variables.json used by Hop at runtime</li>
+        </ul>
+        <div style="font-size:10px;font-weight:700;color:var(--teal-dk);margin:6px 0 3px">variables.json (runtime generated)</div>
+        <div class="code">
+          <span class="arg">{</span><br>
+          <span class="key">&nbsp;"variables"</span><span class="arg">: {</span><br>
+          <span class="str">&nbsp;&nbsp;"DB_HOST"</span><span class="arg">: </span><span class="val">"prod-db.company.com"</span><span class="arg">,</span><br>
+          <span class="str">&nbsp;&nbsp;"DB_USER"</span><span class="arg">: </span><span class="val">"hop_user"</span><span class="arg">,</span><br>
+          <span class="str">&nbsp;&nbsp;"DB_PASSWORD"</span><span class="arg">: </span><span class="val">"*******"</span><span class="arg">,</span><br>
+          <span class="str">&nbsp;&nbsp;"INPUT_FOLDER"</span><span class="arg">: </span><span class="val">"/landing/customer"</span><span class="arg">,</span><br>
+          <span class="str">&nbsp;&nbsp;"LOG_LEVEL"</span><span class="arg">: </span><span class="val">"INFO"</span><br>
+          <span class="arg">&nbsp;}</span><br>
+          <span class="arg">}</span>
+        </div>
+      </div>
+
+      <!-- How container uses them -->
+      <div class="card" style="background:#f0fdf9;border-color:var(--teal-bd)">
+        <div class="card-title" style="color:var(--teal-dk)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" style="vertical-align:middle;margin-right:3px"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          How Container Uses Them
+        </div>
+        <div class="how-step">
+          <div class="how-num">1</div>
+          <div class="how-txt"><strong>Startup Script</strong><br>– Read ConfigMap (mounted)<br>– Read Secret (mounted)<br>– Generate variables.json in /app/config/</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">2</div>
+          <div class="how-txt"><strong>Hop Runtime</strong><br>– Load project-config.json (structural from image)<br>– Load variables.json (generated)<br>– Execute Hop workflows</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mount-bar">
+      <span style="font-size:10px;font-weight:700;color:var(--teal-dk)">💡 Mount paths (standardized)</span>
+      <span class="mount-chip">/config</span><span style="font-size:9.5px;color:var(--muted)">(ConfigMap)</span>
+      <span style="color:#94a3b8">|</span>
+      <span class="mount-chip">/secrets</span><span style="font-size:9.5px;color:var(--muted)">(Secret)</span>
+      <span style="color:#94a3b8">|</span>
+      <span class="mount-chip">/app/config</span><span style="font-size:9.5px;color:var(--muted)">(generated files)</span>
+    </div>
+  </div>
+
+  <!-- S6: DEPLOYMENT -->
+  <div class="sec sec-blue">
+    <div class="sec-hdr">6. Deployment on ROSA (OpenShift)</div>
+    <div style="font-size:10.5px;font-weight:600;color:var(--blue-dk);text-align:center">Each environment has its own namespace</div>
+
+    <div class="dep-flow">
+      <div class="dep-node">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div class="dep-node-lbl">Deployment</div>
+      </div>
+      <div style="font-size:18px;color:var(--blue);font-weight:700">→</div>
+      <div class="dep-node">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        <div class="dep-node-lbl">Pod</div>
+      </div>
+    </div>
+
+    <div class="uses-box">
+      <div class="uses-ttl">Uses:</div>
+      <ul class="bul blue"><li>Immutable Application Image from Artifactory</li><li>ConfigMap (non-sensitive config)</li><li>Secret (sensitive config)</li></ul>
+    </div>
+
+    <div style="font-size:10.5px;font-weight:700;color:var(--blue-dk);text-align:center;margin-bottom:4px">OpenShift Resources</div>
+    <div class="os-res">
+      <div class="os-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div class="os-lbl">Deployment</div>
+      </div>
+      <div class="os-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div class="os-lbl">ConfigMap</div>
+      </div>
+      <div class="os-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div class="os-lbl">Secret</div>
+      </div>
+      <div class="os-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div class="os-lbl">Service<br>(Optional)</div>
+      </div>
+      <div class="os-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        <div class="os-lbl">Route<br>(Optional)</div>
+      </div>
+    </div>
+  </div>
+</div><!-- /row2 -->
+
+<!-- ══════ ROW 3: GOVERNANCE ══════ -->
+<div class="row3 sec sec-indigo">
+  <div class="sec-hdr">7. Governance, Security &amp; Observability</div>
+  <div class="gov-grid">
+    <div class="gov-card">
+      <div class="gov-ttl"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Security</div>
+      <ul class="bul green"><li>Image scanning (Xray/Trivy)</li><li>Secrets via OpenShift Secrets</li><li>RBAC for namespaces</li><li>Network policies</li></ul>
+    </div>
+    <div class="gov-card">
+      <div class="gov-ttl"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Quality &amp; Compliance</div>
+      <ul class="bul blue"><li>Code quality (SonarQube)</li><li>Dependency checks</li><li>Audit trail for promotions</li><li>Change approvals</li></ul>
+    </div>
+    <div class="gov-card">
+      <div class="gov-ttl"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Observability</div>
+      <ul class="bul purple"><li>Centralized logging (EFK/ELK)</li><li>Metrics (Prometheus/Grafana)</li><li>Alerts &amp; notifications</li></ul>
+    </div>
+    <div class="gov-card">
+      <div class="gov-ttl"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Notifications</div>
+      <ul class="bul amber"><li>Build status</li><li>Deployment status</li><li>Promotion approvals</li></ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ROW 4: LEGEND + BENEFITS ══════ -->
+<div class="row4">
+  <div class="info-box">
+    <div class="info-ttl">Legend</div>
+    <div class="leg-item"><div class="leg-line" style="background:var(--blue)"></div>CI/CD Flow</div>
+    <div class="leg-item"><div class="leg-dash" style="border-color:var(--purple)"></div>Promotion / Approval Flow</div>
+    <div class="leg-item"><div class="leg-dash" style="border-color:var(--amber)"></div>Trigger / Integration Flow</div>
+    <div class="leg-item"><div class="leg-rect" style="border-color:#94a3b8"></div>Data / Config Flow</div>
+  </div>
+  <div class="info-box">
+    <div class="info-ttl">Key Benefits</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Immutable images – build once, promote many</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Environment config externalized (visible in GUI)</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Secure separation of sensitive vs non-sensitive data</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Full visibility in OpenShift (ConfigMaps, Secrets, Pods)</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Controlled promotions with approvals</div>
+    <div class="ben-item"><span class="ben-chk">✓</span>Scalable, repeatable and auditable</div>
+  </div>
+</div>
+
+</body>
+</html>
