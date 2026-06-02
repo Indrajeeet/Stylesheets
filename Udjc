@@ -1,0 +1,205 @@
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.hop.core.variables.IVariables;
+import org.apache.hop.core.parameters.INamedParameters;
+
+// ============================================================
+// INSTANCE VARIABLES
+// ============================================================
+private IVariables        parentVars;
+private INamedParameters  namedParams;
+
+private final Map<String, String> parameterMap    = new HashMap<>();
+private final Set<String>         validParameters = new HashSet<>();
+
+private int duplicateCount  = 0;
+private int parameterCount  = 0;
+private int skippedCount    = 0;
+
+// ============================================================
+// INIT — called once before row processing starts
+// ============================================================
+public boolean init() {
+
+    try {
+        parentVars = getPipeline().getParent();
+
+        // ---- Guard: parent must exist ----------------------
+        if (parentVars == null) {
+            logError("Parent variable space is null. "
+                + "Ensure this pipeline is called from a workflow.");
+            return false;
+        }
+
+        // ---- Load declared parameters if available ---------
+        if (parentVars instanceof INamedParameters) {
+            namedParams = (INamedParameters) parentVars;
+
+            String[] params = namedParams.listParameters();
+            if (params != null) {
+                for (String p : params) {
+                    validParameters.add(p);
+                }
+            }
+
+            logBasic("INamedParameters available. Declared parameter "
+                + "count: " + validParameters.size());
+        } else {
+            logBasic("Parent does not implement INamedParameters. "
+                + "Will fall back to setVariable for all keys.");
+        }
+
+        return super.init();
+
+    } catch (Exception e) {
+        logError("Initialisation failed: " + e.getMessage(), e);
+        return false;
+    }
+}
+
+// ============================================================
+// PROCESS ROW — called once per row from JSON Input
+// Collects KEY/VALUE into map — does NOT apply yet
+// Atomic apply happens in dispose() after all rows collected
+// ============================================================
+public boolean processRow() throws Exception {
+
+    Object[] r = getRow();
+
+    // ---- No more rows — signal pipeline done ---------------
+    if (r == null) {
+        setOutputDone();
+        return false;
+    }
+
+    // ---- Guard: parent must still be valid -----------------
+    if (parentVars == null) {
+        logError("Parent variable space is null in processRow. Aborting.");
+        setErrors(1);
+        stopAll();
+        return false;
+    }
+
+    // ---- Read KEY and VALUE fields -------------------------
+    String key   = get(Fields.In, "KEY").getString(r);
+    String value = get(Fields.In, "VALUE").getString(r);
+
+    // ---- Validate KEY --------------------------------------
+    if (key == null || key.trim().isEmpty()) {
+        logBasic("Skipping row — KEY is null or empty.");
+        skippedCount++;
+        putRow(data.outputRowMeta, r);
+        return true;
+    }
+
+    key   = key.trim();
+    value = (value != null) ? value.trim() : "";
+
+    // ---- Warn if key not declared in parent ----------------
+    // Do NOT throw — downstream HWF may declare it, not parent
+    // This is the key fix from original validation logic
+    if (namedParams != null
+            && !validParameters.isEmpty()
+            && !validParameters.contains(key)) {
+        logBasic("Warning: [" + key + "] is not declared in parent "
+            + "workflow. Will apply as variable fallback in dispose().");
+    }
+
+    // ---- Detect and log duplicates — last value wins -------
+    if (parameterMap.containsKey(key)) {
+        duplicateCount++;
+        logBasic("Duplicate key [" + key + "] detected. "
+            + "Previous value [" + parameterMap.get(key) + "] "
+            + "will be overwritten with [" + value + "].");
+    }
+
+    // ---- Collect into map — atomic apply later -------------
+    parameterMap.put(key, value);
+    parameterCount++;
+
+    logBasic("Collected parameter: [" + key + "] = [" + value + "]");
+
+    putRow(data.outputRowMeta, r);
+    return true;
+}
+
+// ============================================================
+// DISPOSE — called once after ALL rows processed
+// Applies all collected parameters atomically
+// Mirrors exactly what hop-run does after -p processing:
+//   1. setParameterValue for each declared parameter
+//   2. setVariable fallback for undeclared keys
+//   3. activateParameters to promote into variable space
+// ============================================================
+public void dispose() {
+
+    try {
+
+        if (parentVars == null) {
+            logError("Parent variable space is null in dispose(). "
+                + "No parameters will be applied.");
+            return;
+        }
+
+        int appliedAsParam    = 0;
+        int appliedAsVariable = 0;
+
+        for (Map.Entry<String, String> entry : parameterMap.entrySet()) {
+
+            String k = entry.getKey();
+            String v = entry.getValue();
+
+            if (namedParams != null && validParameters.contains(k)) {
+                // ---- Declared parameter — use setParameterValue ----
+                // Exact same mechanism as hop-run -p KEY=VALUE
+                namedParams.setParameterValue(k, v);
+                appliedAsParam++;
+                logBasic("Applied as parameter:  [" + k + "] = [" + v + "]");
+
+            } else {
+                // ---- Not declared — fall back to setVariable -------
+                // Covers dynamic keys unknown to parent workflow
+                // Downstream HWF with default=${KEY} will resolve this
+                parentVars.setVariable(k, v);
+                appliedAsVariable++;
+                logBasic("Applied as variable:   [" + k + "] = [" + v + "]");
+            }
+        }
+
+        // ---- Activate parameters — promotes into variable space ----
+        // Must be called AFTER all setParameterValue calls
+        // Without this, ${KEY} still resolves to default value
+        if (namedParams != null) {
+            namedParams.activateParameters(namedParams);
+            logBasic("activateParameters() called successfully.");
+        }
+
+        // ---- Final summary log ---------------------------------
+        logBasic("==== Parameter Load Summary ====");
+        logBasic("Total rows processed : " + parameterCount);
+        logBasic("Unique parameters    : " + parameterMap.size());
+        logBasic("Duplicates detected  : " + duplicateCount);
+        logBasic("Skipped (blank keys) : " + skippedCount);
+        logBasic("Applied as parameter : " + appliedAsParam);
+        logBasic("Applied as variable  : " + appliedAsVariable);
+        logBasic("================================");
+
+    } catch (Exception e) {
+        logError("Parameter activation failed: " + e.getMessage(), e);
+
+        // Stop pipeline — do not let downstream HWF run
+        // with incomplete or partial parameter state
+        try {
+            stopAll();
+        } catch (Exception ignored) {
+            // stopAll itself should not throw but guard anyway
+        }
+
+    } finally {
+        // Always call super — guaranteed cleanup
+        super.dispose();
+    }
+}
