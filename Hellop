@@ -1,0 +1,858 @@
+Pentaho to Apache Hop — Migration Validation Harness
+
+1. Purpose
+
+Build a Migration Validation Harness around the existing Java-based Pentaho → Apache Hop migration tooling.
+
+The purpose is not to recreate the Pentaho testing framework in Hop.
+
+The purpose is to:
+
+«Reuse approved SIT test intent, execute equivalent scenarios against Pentaho and Hop where required, validate expected assertions, compare execution evidence, and produce auditable evidence for migration sign-off.»
+
+The long-term test assets must survive the migration and become part of the future Hop regression-testing capability.
+
+---
+
+2. Core Design Principle
+
+Reuse test intent, not legacy test implementation
+
+Existing Pentaho SIT tests may contain:
+
+- Given KJBs
+- When KJBs
+- Then/Assert KJBs
+- "before/output.log"
+- "after/output.log"
+- Expected log entries
+- Test data
+- External-system simulation
+
+Do not convert these test KJBs into Hop workflows/pipelines.
+
+Instead:
+
+1. Understand the SIT test intent.
+2. Extract/represent that intent in a technology-neutral test specification.
+3. Execute the scenario using the Java test harness.
+4. Run the equivalent business workload in Hop.
+5. Evaluate assertions.
+6. Compare Pentaho and Hop execution evidence where useful.
+7. Generate unified HTML evidence.
+8. Return a CI-compatible pass/fail result.
+
+---
+
+3. Authoritative Source for Sign-off
+
+The SIT team's approved test scenarios and expected outcomes are the primary source of truth for migration sign-off.
+
+The hierarchy is:
+
+SIT-approved expected behaviour
+              |
+              v
+      Pentaho baseline
+              |
+              v
+        Hop execution
+              |
+              v
+Assertions + behavioural comparison
+              |
+              v
+        SIT sign-off
+
+Pentaho behaviour must not automatically be treated as the definition of correctness.
+
+If Pentaho has an existing defect, the SIT-approved expected behaviour takes precedence.
+
+Example:
+
+SIT expectation: 10,000 records
+
+Pentaho: 10,000
+Hop:     10,000
+
+PASS
+
+If:
+
+SIT expectation: 10,000
+Pentaho:          9,998
+Hop:              9,998
+
+the migration should not automatically be considered correct merely because Hop matches Pentaho.
+
+The expected behaviour must be reviewed.
+
+---
+
+4. Test Categories
+
+The harness should support multiple validation types while remaining one unified testing system.
+
+4.1 Assertion Tests
+
+Validate an explicit expected result.
+
+Examples:
+
+workflow.status == SUCCESS
+recordsProcessed == 10000
+outputFile.exists == true
+rejectedRecords == 25
+
+Assertions may be:
+
+- Exact
+- Structured
+- Numeric
+- File-based
+- Database-based
+- Execution-state based
+- Log-based
+
+---
+
+4.2 Execution Tests
+
+Validate that the Hop workload executes correctly.
+
+Examples:
+
+Workflow started
+Pipeline A executed
+Pipeline B executed
+Error handler not executed
+Workflow completed successfully
+
+---
+
+4.3 Differential Tests
+
+Compare Pentaho and Hop behaviour.
+
+Examples:
+
+Pentaho: Job completed
+Hop:     Workflow completed
+
+=> Semantic Match
+
+Pentaho: Transformation executed
+Hop:     Pipeline executed
+
+=> Semantic Match
+
+Differential testing should classify results as:
+
+- Exact Match
+- Semantic Match
+- Expected Difference
+- No Match
+- Investigation Required
+
+---
+
+4.4 Evidence
+
+Evidence is the supporting execution information used to explain and audit the result.
+
+Evidence may include:
+
+- Pentaho logs
+- Hop logs
+- Structured execution metadata
+- Input files
+- Output files
+- Record counts
+- Database results
+- Assertion results
+- Semantic comparison results
+
+---
+
+5. Existing Pentaho Test Model
+
+Existing Pentaho tests may conceptually look like:
+
+before/
+    output.log
+
+test/
+    given/
+        *.kjb
+
+    when/
+        *.kjb
+
+    then/
+        *.kjb
+
+after/
+    output.log
+
+The test executes KJBs and compares expected log entries with actual log output.
+
+The migration harness should not reproduce this technical implementation.
+
+Instead, extract the intent:
+
+GIVEN
+  Preconditions / test data / external event
+
+WHEN
+  Business workload executes
+
+THEN
+  Expected business behaviour
+
+---
+
+6. Technology-Neutral Test Specification
+
+Tests should be represented independently of Pentaho or Hop.
+
+Example:
+
+testId: SIT-0234
+
+name: Customer Load - Valid File
+
+given:
+  - inputFile: customer_valid.csv
+
+when:
+  pentaho: Customer_Load.kjb
+  hop: Customer_Load.hwf
+
+assertions:
+
+  - type: workflowStatus
+    expected: SUCCESS
+
+  - type: executed
+    target: Customer Pipeline
+    expected: true
+
+  - type: recordsProcessed
+    target: Customer Pipeline
+    expected: 10000
+
+  - type: fileExists
+    target: /output/customer.csv
+    expected: true
+
+The exact schema can evolve.
+
+The key rule is:
+
+«The test definition describes behaviour and expected outcomes, not platform-specific test mechanics.»
+
+---
+
+7. Pentaho Tests With Good Existing Coverage
+
+If a useful Pentaho SIT test already exists:
+
+Do not rewrite it.
+
+Do not convert its KJBs to Hop.
+
+Instead:
+
+Existing SIT Test
+       |
+       v
+Extract Test Intent
+       |
+       v
+Technology-Neutral Test
+       |
+       +----------------+
+       |                |
+       v                v
+Pentaho baseline       Hop
+       |                |
+       +-------+--------+
+               |
+               v
+       Assertions +
+       Differential Comparison
+
+The original Pentaho test becomes the source for understanding the approved scenario and assertions.
+
+---
+
+8. Pentaho Jobs With No Useful Tests
+
+Do not create a full Pentaho-specific test suite purely for migration.
+
+Instead:
+
+1. Identify important business scenarios.
+2. Agree the scenario and expected result with SIT/business stakeholders.
+3. Create the new technology-neutral test.
+4. Run the scenario against Pentaho where useful to establish a baseline.
+5. Run the same scenario against Hop.
+6. Use the new test as the future regression test.
+
+Principle:
+
+«Do not create technical debt in a platform that is being retired just to facilitate migration.»
+
+For high-risk or business-critical workloads, obtain explicit SIT/business approval of the test scenario and expected outcome.
+
+---
+
+9. External-System Simulation
+
+Some existing SIT tests simulate an external system by transferring a file through FTP/SFTP.
+
+Example:
+
+External System
+      |
+      | FTP/SFTP
+      v
+Inbound Folder
+      |
+      v
+Pentaho Job
+
+For migration regression testing, the important intent is:
+
+«The external system has delivered the file.»
+
+The migration harness does not need to reproduce FTP/SFTP if transport itself is not what the test is validating.
+
+Instead:
+
+Test Data
+    |
+    v
+Java Test Harness
+    |
+    | copy/move
+    v
+Hop inbound folder
+    |
+    v
+Hop workflow
+
+This provides deterministic and fast migration regression tests.
+
+Separate integration tests should still validate actual FTP/SFTP connectivity where transport is a production requirement.
+
+---
+
+10. Java Test Harness
+
+The existing Java migration tool should be extended into the common test orchestrator.
+
+Conceptually:
+
+Test Specification
+       |
+       v
+Java Test Harness
+       |
+       +--> Prepare test data
+       |
+       +--> Simulate external events
+       |
+       +--> Execute Pentaho baseline
+       |
+       +--> Execute Hop workload
+       |
+       +--> Capture evidence
+       |
+       +--> Evaluate assertions
+       |
+       +--> Semantic comparison
+       |
+       +--> Generate HTML
+       |
+       +--> Generate JUnit XML
+       |
+       +--> Return exit code
+
+External-system adapters must remain thin.
+
+Examples:
+
+SFTP adapter:
+send(file, destination)
+
+File adapter:
+copy(file, destination)
+
+MQ adapter:
+publish(message)
+
+HTTP adapter:
+send(request)
+
+Do not put business logic into these adapters.
+
+---
+
+11. Assertion Engine
+
+The assertion engine should support multiple assertion mechanisms.
+
+Exact Assertions
+
+Used when exact output is required.
+
+Example:
+
+ASSERT recordsProcessed == 10000
+
+or:
+
+ASSERT "10000 records processed"
+
+---
+
+Semantic Assertions
+
+Used when Pentaho and Hop terminology differs.
+
+Example:
+
+Pentaho:
+Job completed successfully
+
+Hop:
+Workflow completed successfully
+
+Result:
+SEMANTIC MATCH
+
+Another:
+
+Pentaho:
+Transformation executed
+
+Hop:
+Pipeline executed
+
+Result:
+SEMANTIC MATCH
+
+---
+
+Structured Assertions
+
+Prefer structured assertions where reliable structured data is available.
+
+Examples:
+
+workflow.status == SUCCESS
+recordsProcessed == 10000
+outputFile.exists == true
+database.rowCount == 10000
+
+Logs should be used as assertions when the log is the most reliable observable signal.
+
+---
+
+12. Differential Comparison Engine
+
+The existing migration tool already recursively analyses:
+
+- Jobs
+- Transformations
+- Actions
+- Steps
+- Nested jobs
+- Nested transformations
+- Execution logs
+
+This capability should remain part of the validation harness.
+
+Example:
+
+Pentaho                         Hop
+------------------------------------------------
+Job A                           Workflow A
+Transformation A                Pipeline A
+Step X                          Step X
+Job completed                   Workflow completed
+
+Results:
+
+Job -> Workflow
+       SEMANTIC MATCH
+
+Transformation -> Pipeline
+       SEMANTIC MATCH
+
+Step X -> Step X
+       EXACT MATCH
+
+---
+
+13. Evidence Capture
+
+For a differential test:
+
+Same SIT input
+       |
+       +---------------------+
+       |                     |
+       v                     v
+   Pentaho                  Hop
+       |                     |
+       v                     v
+Pentaho evidence         Hop evidence
+       |                     |
+       +----------+----------+
+                  |
+                  v
+       Assertion + Comparison
+                  |
+                  v
+            HTML Report
+
+Evidence should be retained as build artifacts.
+
+---
+
+14. Unified HTML Report
+
+Do NOT create completely separate test systems or separate competing reports.
+
+Use:
+
+«One migration test harness + one unified test model + one overall HTML report.»
+
+However, the HTML report should keep validation concerns clearly separated.
+
+Example:
+
+SIT-0234 Customer Load
+================================================
+
+OVERALL RESULT: PASS
+
+1. Assertions
+------------------------------------------------
+[PASS] 10,000 records processed
+[PASS] Output file exists
+[PASS] Workflow successful
+
+2. Hop Execution
+------------------------------------------------
+[PASS] Workflow started
+[PASS] Pipeline A executed
+[PASS] Pipeline B executed
+[PASS] Workflow completed
+
+3. Pentaho <-> Hop Comparison
+------------------------------------------------
+[SEMANTIC MATCH] Job -> Workflow
+[SEMANTIC MATCH] Transformation -> Pipeline
+[EXACT MATCH]    Records processed
+
+4. Evidence
+------------------------------------------------
+Pentaho evidence       | Hop evidence
+-----------------------|-------------------------
+Job started            | Workflow started
+Transformation A       | Pipeline A
+10000 records          | 10000 records
+Job completed          | Workflow completed
+
+The user should see one authoritative result.
+
+The underlying engines remain modular.
+
+---
+
+15. Do Not Create Separate "Unit Test" and "Migration Test" Systems
+
+Avoid this model:
+
+Unit Test Framework
+        |
+        v
+Unit Test Report
+
+Migration Framework
+        |
+        v
+Migration Report
+
+This creates:
+
+- Duplicate execution
+- Duplicate configuration
+- Duplicate evidence
+- Multiple CI gates
+- Conflicting results
+- Confusing sign-off
+
+Instead:
+
+             Migration Validation Harness
+                       |
+       +---------------+---------------+
+       |               |               |
+       v               v               v
+  Assertions       Execution       Differential
+       |               |               |
+       +---------------+---------------+
+                       |
+                       v
+                Evidence Engine
+                       |
+                       v
+                Unified Report
+
+---
+
+16. CI/CD Integration
+
+The existing Pentaho process fails the Jenkins build when tests fail.
+
+The Hop validation framework should preserve that contract.
+
+Recommended pipeline:
+
+Jenkins
+   |
+   v
+Build Hop project/image
+   |
+   v
+Prepare test environment
+   |
+   v
+Run migration test suite
+   |
+   v
+Execute Hop workloads
+   |
+   v
+Capture evidence
+   |
+   v
+Evaluate assertions
+   |
+   v
+Generate HTML report
+   |
+   v
+Generate JUnit XML
+   |
+   v
+Return process exit code
+
+Result:
+
+exit 0
+    -> Jenkins PASS
+
+non-zero
+    -> Jenkins FAIL
+
+---
+
+17. JUnit XML
+
+The harness should generate JUnit-compatible XML even though the tests do not need to be implemented using JUnit internally.
+
+Example conceptual result:
+
+Tests: 250
+Passed: 249
+Failed: 1
+Skipped: 0
+
+Jenkins can consume the report using standard test reporting.
+
+This gives the migration test harness standard enterprise CI behaviour without requiring Hop workflows themselves to implement JUnit.
+
+---
+
+18. Overall Migration Validation Model
+
+The final validation model has three primary layers:
+
+             MIGRATION VALIDATION
+                     |
+        +------------+------------+
+        |            |            |
+        v            v            v
+   Structural    Behavioural   Business
+   Validation    Comparison    Assertions
+        |            |            |
+        |            |            |
+     Correct      Pentaho ↔      SIT
+    conversion       Hop       expected
+        |            |          result
+        +------------+------------+
+                     |
+                     v
+              Final Test Result
+                     |
+             +-------+-------+
+             |               |
+           PASS            FAIL
+
+---
+
+19. Test Result Example
+
+A complete test case should ultimately be represented as:
+
+SIT-0234
+Customer Load - Valid File
+
+Overall: PASS
+
+SIT Assertions:
+    5/5 passed
+
+Hop Execution:
+    PASS
+
+Pentaho Baseline:
+    PASS
+
+Pentaho <-> Hop:
+    98% exact/semantic equivalent
+
+Evidence:
+    Available
+
+CI:
+    PASS
+
+For a failure:
+
+SIT-0234
+Customer Load - Valid File
+
+Overall: FAIL
+
+Assertion:
+    Expected records = 10,000
+    Actual records   = 9,997
+
+Pentaho:
+    10,000
+
+Hop:
+    9,997
+
+Differential:
+    Behavioural difference detected
+
+CI:
+    FAIL
+
+---
+
+20. Target Architecture
+
+The target capability is:
+
+                  SIT TEST INTENT
+                         |
+                         v
+              Technology-Neutral Test
+                    Specification
+                         |
+                         v
+                Java Test Harness
+                         |
+        +----------------+----------------+
+        |                |                |
+        v                v                v
+ Test Data          Hop Runner      Pentaho Baseline
+ Preparation             |                |
+        |                |                |
+        +----------------+----------------+
+                         |
+                         v
+                  Evidence Capture
+                         |
+             +-----------+-----------+
+             |                       |
+             v                       v
+       Assertion Engine       Semantic Engine
+             |                       |
+             +-----------+-----------+
+                         |
+                         v
+                  Unified Result
+                         |
+             +-----------+-----------+
+             |                       |
+             v                       v
+         HTML Report             JUnit XML
+                                     |
+                                     v
+                                  Jenkins
+                                     |
+                              PASS / FAIL
+
+---
+
+21. Long-Term Goal
+
+The migration tooling should evolve from:
+
+Pentaho -> Hop Converter
+
+into:
+
+Pentaho -> Hop Migration
++
+Validation
++
+Regression Testing
++
+Evidence
++
+CI/CD Quality Gate
+
+The final value proposition is:
+
+«We are not simply converting Pentaho workloads to Hop. We are automatically validating that the migrated Hop workloads preserve the approved SIT test intent and required business behaviour, while producing auditable evidence for sign-off.»
+
+---
+
+22. Non-Negotiable Design Principles
+
+1. SIT-approved behaviour is the primary sign-off source.
+2. Reuse test intent, not legacy Pentaho test KJB implementation.
+3. Do not create unnecessary Pentaho-specific tests for workloads with no useful coverage.
+4. Use Pentaho as a baseline/reference where appropriate.
+5. Use the same deterministic test inputs for Pentaho and Hop where practical.
+6. Keep external-system simulators thin and deterministic.
+7. Use exact assertions for exact expectations.
+8. Use semantic matching for expected Pentaho → Hop terminology differences.
+9. Prefer structured assertions over fragile log-string assertions when possible.
+10. Keep assertion, execution, differential and evidence engines modular.
+11. Expose them through one unified migration test harness.
+12. Generate one authoritative HTML test report per test/suite.
+13. Generate JUnit XML for Jenkins integration.
+14. Return non-zero exit code when required tests fail.
+15. Make the resulting tests reusable as the future Hop regression suite.
+16. The test assets should survive the Pentaho retirement.
+
+---
+
+Final Design Statement
+
+The locked-in strategy is:
+
+«Build one Java-based Migration Validation Harness that converts SIT test intent—not Pentaho test KJBs—into technology-neutral executable scenarios. Use deterministic test setup, execute the equivalent workload in Hop, optionally execute Pentaho to establish a baseline, capture evidence from both sides, evaluate exact/structured assertions, perform semantic Pentaho-to-Hop comparison, generate a unified HTML report and JUnit XML, and use the exit code as the Jenkins quality gate.»
+
+This provides a single, reusable testing capability for migration sign-off today and Hop regression testing tomorrow.
